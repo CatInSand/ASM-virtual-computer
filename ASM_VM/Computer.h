@@ -1,6 +1,7 @@
 #pragma once
 #include <vector>
 #include <string>
+#include <array>
 
 // Computer holds all data and performs parsed ASM instructions
 //
@@ -16,8 +17,9 @@ class Computer final
 {
 public:
 	static constexpr unsigned int ROM_SIZE{ 256 };
-	Computer(const uint8_t ROM[ROM_SIZE]);
+	Computer(const std::array<uint8_t, ROM_SIZE>& ROM);
 	void Run();
+
 private:
 	bool HandleInstruction(uint8_t opCode);
 	void WriteRAM(uint8_t address, uint8_t data);
@@ -26,9 +28,9 @@ private:
 	static constexpr unsigned int RAM_SIZE{ 256 };
 	static constexpr unsigned int FLAG_COUNT{ 8 };
 
-	uint8_t m_Stack[STACK_SIZE];
-	uint8_t m_RAM[RAM_SIZE];
-	uint8_t m_ROM[ROM_SIZE];
+	std::array<uint8_t, STACK_SIZE> m_Stack;	//uninitialized on purpose
+	std::array<uint8_t, RAM_SIZE> m_RAM;		//uninitialized on purpose
+	std::array<uint8_t, ROM_SIZE> m_ROM;
 
 	uint8_t m_ProgramCounter{};
 	uint8_t m_StackPointer{};

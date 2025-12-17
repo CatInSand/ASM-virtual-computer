@@ -2,7 +2,7 @@
 
 int main()
 {
-	const uint8_t ROM[Computer::ROM_SIZE]{
+	const std::array<uint8_t, Computer::ROM_SIZE> ROM{
 		0x09, 0x05, //	LDA #$05
 		0x01, 0x04, //	CMP #$04
 		0x04, 0x0a, //	BMI :+
