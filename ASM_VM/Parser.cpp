@@ -10,6 +10,45 @@
 // token file contains assembly and labels as tokenized text with strict formatting
 // ROM contains raw opcodes as an array of uint8_t
 
+void Parser::ParseTextToTokens(const std::string& inputPath, const std::string& outputPath)
+{
+	if (std::ifstream inputStream{ inputPath }; inputStream.is_open())
+	{
+		if (std::ofstream outputStream{ outputPath }; outputStream.is_open())
+		{
+			//read char per char
+			//	if(charstream.isopcode)
+			//		if(charstream.isunaryopcode)
+			//			add("o " + charstream + '-')
+			//		else
+			//			skipchar
+			//	else
+			// 
+			//	case ';':
+			//		skipline
+			//		empty charstream
+			//	case ':':
+			//		add("l " + charstream)
+			//		empty charstream
+			//  case ws:
+			//		if(!charstream.isempty)
+			//			throw invalid syntax exception
+			//	case default:
+			//		charstream.append(char)
+			//
+
+		}
+		else
+		{
+			std::cout << "Couldn't open input stream." << std::endl;
+		}
+	}
+	else
+	{
+		std::cout << "Couldn't open input stream." << std::endl;
+	}
+}
+
 std::array<uint8_t, Computer::ROM_SIZE> Parser::ParseTokensToROM(const std::string& path)
 {
 	if (std::ifstream inputStream{ path }; inputStream.is_open())

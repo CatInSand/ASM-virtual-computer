@@ -8,6 +8,7 @@ class Parser final
 {
 public:
 	Parser() = default;
+	static void ParseTextToTokens(const std::string& inputPath, const std::string& outputPath);
 	static std::array<uint8_t, Computer::ROM_SIZE> ParseTokensToROM(const std::string& path);
 
 	static const std::unordered_map<std::string, uint8_t> m_OpcodeHashMap;
