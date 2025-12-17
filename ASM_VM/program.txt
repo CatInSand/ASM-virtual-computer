@@ -1,0 +1,37 @@
+LDA	#$05
+CMP #$04
+
+; if(a > 4) Print();
+BMI :+
+BEQ :+
+	JSR print_a_twenty_times
+:
+BRK
+
+; print 'A' 20 times with newline
+print_a_twenty_times:
+	PHA		;initial push
+	PHX
+
+	;function start
+
+	LDX #$00
+@loop:
+	LDA #$41
+	STA $FE
+	INX
+	PHA
+	TXA
+	CMP #$14
+	PLA
+	BEQ :+
+		JMP @loop
+	:
+	LDA #$11
+	STA $FF
+
+	;function end
+
+	PLX
+	PLA
+	RTS
