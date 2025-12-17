@@ -1,12 +1,10 @@
 #include "Computer.h"
 #include <iostream>
 
-Computer::Computer(const uint8_t ROM[ROM_SIZE])
+Computer::Computer(const std::array<uint8_t, ROM_SIZE>& ROM)
+	: m_ROM{ ROM }
 {
-	for (int index{ 0 }; index < ROM_SIZE; ++index)
-	{
-		m_ROM[index] = ROM[index];
-	}
+
 }
 
 /// <summary>
