@@ -16,27 +16,131 @@ void Parser::ParseTextToTokens(const std::string& inputPath, const std::string& 
 	{
 		if (std::ofstream outputStream{ outputPath }; outputStream.is_open())
 		{
-			//read char per char
-			//	if(charstream.isopcode)
-			//		if(charstream.isunaryopcode)
-			//			add("o " + charstream + '-')
-			//		else
-			//			skipchar
-			//	else
-			// 
-			//	case ';':
-			//		skipline
-			//		empty charstream
-			//	case ':':
-			//		add("l " + charstream)
-			//		empty charstream
-			//  case ws:
-			//		if(!charstream.isempty)
-			//			throw invalid syntax exception
-			//	case default:
-			//		charstream.append(char)
-			//
+			ReadingType readingType{ ReadingType::none };
+			char currentChar{};
+			std::string charStream{};
+			std::string outputString{};
+			std::string garbageString{};
+			bool reading{ true };
 
+			uint8_t currentULabel{ 0 };
+
+			while (reading)
+			{
+				switch (readingType)
+				{
+				case Parser::ReadingType::none:
+					//chars or unnamed label
+					if (GetChar(inputStream, currentChar, false))
+					{
+						//found end of file
+						reading = false;
+						continue;
+					}
+					switch (currentChar)
+					{
+					case ' ':
+					case '\t':
+					case '\n':
+						//ignore whitespace
+						break;
+					case ';':
+						//skip commented line
+						ResetRead(charStream, readingType, inputStream);
+						break;
+					case ':':
+						//unnamed label
+						readingType = ReadingType::uLabel;
+						break;
+					default:
+						//found character
+						charStream += currentChar;
+						readingType = ReadingType::chars;
+						break;
+					}
+					break;
+				case Parser::ReadingType::uLabel:
+					outputString = "l :" + IntToHexString(currentULabel) + "\n";
+					++currentULabel;
+					outputStream.write(outputString.c_str(), outputString.size());
+					ResetRead(charStream, readingType, inputStream);
+					break;
+				case Parser::ReadingType::chars:
+					//named label or opcode
+					while (true)
+					{
+						GetChar(inputStream, currentChar);
+						if (!IsValid(currentChar))
+						{
+							throw std::exception("Invalid syntax: expected letter, instead found \'" + currentChar + '\'');
+						}
+						else if (currentChar == ':')
+						{
+							//named label
+							readingType = ReadingType::nLabel;
+							break;
+						}
+						else if (IsOpcode(charStream))
+						{
+							readingType = ReadingType::opcode;
+							break;
+						}
+						else
+						{
+							charStream += currentChar;
+						}
+					}
+					break;
+				case Parser::ReadingType::nLabel:
+					outputString = "l " + charStream + "\n";
+					outputStream.write(outputString.c_str(), outputString.size());
+					ResetRead(charStream, readingType, inputStream);
+					break;
+				case Parser::ReadingType::opcode:
+					//unary or binary opcode
+					if (m_UnaryOpcodeHashMap.contains(charStream))
+					{
+						readingType = ReadingType::unaryOpcode;
+						break;
+					}
+					else
+					{
+						readingType = ReadingType::binaryOpcode;
+						break;
+					}
+					break;
+				case Parser::ReadingType::unaryOpcode:
+					outputString = "o " + charStream + "-\n";
+					outputStream.write(outputString.c_str(), outputString.size());
+					ResetRead(charStream, readingType, inputStream);
+					break;
+				case Parser::ReadingType::binaryOpcode:
+					//normal binary, named-labeled or unnamed-labeled opcode
+					GetChar(inputStream, currentChar); //skip leading space
+					if (currentChar != ' ') throw std::exception("Invalid syntax: expected \' \', instead found \'" + currentChar + '\'');
+
+					while (true)
+					{
+						GetChar(inputStream, currentChar);
+						switch (currentChar)
+						{
+						case '#':
+
+						default:
+							break;
+						}
+					}
+					break;
+				case Parser::ReadingType::normalBinaryOpcode:
+					break;
+				case Parser::ReadingType::nLabeledOpcode:
+					break;
+				case Parser::ReadingType::uLabeledOpcode:
+					break;
+				default:
+					break;
+				}
+			}
 		}
 		else
 		{
@@ -55,8 +159,10 @@ std::array<uint8_t, Computer::ROM_SIZE> Parser::ParseTokensToROM(const std::stri
 	{
 		std::array<uint8_t, Computer::ROM_SIZE> result{};
 		std::unordered_map<std::string, uint8_t> labelHashMap{};
+		std::vector<unsigned int> unnamedLabels{};
+		std::vector<LocalLabel> localLabels{};
 		bool reading{ true };
-		int currentLine{ 0 };
+		unsigned int currentLine{ 0 };
 		std::string token{};
 		std::string labelName{};
 		std::string opcode{};
@@ -65,33 +171,38 @@ std::array<uint8_t, Computer::ROM_SIZE> Parser::ParseTokensToROM(const std::stri
 		//parse labels
 		while (reading)
 		{
-			if (std::getline(inputStream, token, ' '))
+			if (std::getline(inputStream, token, '.'))
 			{
-				if (token == "l")
+				if(token == "nlb")
 				{
-					std::getline(inputStream, labelName);
+					//named label
+					std::getline(inputStream, labelName, '.');
 					labelHashMap[labelName] = static_cast<uint8_t>(currentLine);
+				}
+				else if(token == "ulb")
+				{
+					//unnamed label
+					unnamedLabels.push_back(currentLine);
+				}
+				else if (token == "llb")
+				{
+					//local label
+					std::getline(inputStream, labelName, '.');
+					localLabels.emplace_back(labelName, currentLine);
+				}
+				else if (token == "uop")
+				{
+					++currentLine;
+				}
+				else if (token == "bop")
+				{
+					++currentLine += 2;
 				}
 				else
 				{
-					//increment currentLine correct count
-					std::getline(inputStream, opcode, '-');
-
-					if (!m_UnaryOpcodeHashMap.contains(opcode))
-					{
-						++currentLine;
-
-						std::getline(inputStream, argument, '-');
-						if (argument == "lbl")
-						{
-							std::getline(inputStream, argument, '-');
-						}
-
-					}
-
-					++currentLine;
-					inputStream.get();
+					throw std::exception("Unknown leading token");
 				}
+				std::getline(inputStream, labelName);	//skip rest of line
 			}
 			else
 			{
@@ -108,8 +219,55 @@ std::array<uint8_t, Computer::ROM_SIZE> Parser::ParseTokensToROM(const std::stri
 		//parse opcodes
 		while (reading)
 		{
-			if (std::getline(inputStream, token, ' '))
+			if (std::getline(inputStream, token, '.'))
 			{
+				if (token == "nlb" || token == "ulb" || token == "llb")
+				{
+					//ignore labels
+				}
+				else if (token == "uop")
+				{
+					std::getline(inputStream, opcode, '.');
+					result[currentLine] = m_OpcodeHashMap.at(opcode);
+					++currentLine;
+				}
+				else if (token == "bop")
+				{
+					std::getline(inputStream, opcode, '.');		//get opcode
+					std::getline(inputStream, argument, '.');	//get addressing type
+					if (argument == "#")
+					{
+						opcode += '#';
+					}
+					result[currentLine] = m_OpcodeHashMap.at(opcode);
+					++currentLine;
+					std::getline(inputStream, argument, '.');	//get type
+					if (argument == "val")
+					{
+						std::getline(inputStream, argument, '.');	//skip type (assume hex)
+						std::getline(inputStream, argument, '.');	//get value
+						result[currentLine] = static_cast<uint8_t>(std::stoi(argument, 0, 16));
+					}
+					else if (argument == "nlb")
+					{
+						std::getline(inputStream, labelName, '.');	//get label
+						result[currentLine] = labelHashMap.at(labelName);
+					}
+					else if (argument == "ulb")
+					{
+						std::getline(inputStream, labelName, '.');	//get sign
+						if (labelName == "+")
+						{
+							std::getline(inputStream, labelName, '.');	//get count
+							//
+						}
+					}
+					++currentLine;
+				}
+				else
+				{
+					throw std::exception("Unknown leading token");
+				}
 				if (token == "o")
 				{
 					std::getline(inputStream, opcode, '-');
@@ -158,6 +316,93 @@ std::array<uint8_t, Computer::ROM_SIZE> Parser::ParseTokensToROM(const std::stri
 	return std::array<uint8_t, Computer::ROM_SIZE>{};
 }
 
+bool Parser::GetChar(std::ifstream& inputStream, char& currentChar, bool allowThrow)
+{
+	if (inputStream.get(currentChar))
+	{
+		return true;
+	}
+	else
+	{
+		if (allowThrow)
+		{
+			throw std::exception("Unexpected end of file");
+		}
+		else
+		{
+			return false;
+		}
+	}
+}
+
+Parser::ReadingType Parser::DetermineReadingType(const std::string& charStream)
+{
+	
+}
+
+std::string Parser::IntToHexString(uint8_t integer)
+{
+	std::stringstream stream;
+	stream << "0x" << std::setfill('0') << std::setw(sizeof(uint8_t) * 2) << std::hex << integer;
+	return stream.str();
+}
+
+void Parser::ResetRead(std::string& charStream, Parser::ReadingType& readingType, std::ifstream& inputStream)
+{
+	readingType = ReadingType::none;
+	std::getline(inputStream, charStream);
+	charStream = "";
+}
+
+bool Parser::IsValid(char character)
+{
+	switch (character)
+	{
+	case ' ':
+	case '\t':
+	case '\n':
+	case ';':
+		return false;
+	default:
+		return true;
+	}
+}
+bool Parser::IsOpcode(const std::string& stringStream)
+{
+	//check size for fast return
+	if (stringStream.size() == 3 && m_OpcodeSet.contains(stringStream))
+	{
+		return true;
+	}
+	return false;
+}
+
+const std::unordered_set<std::string> Parser::m_OpcodeSet{
+	"BRK",
+	"CMP",
+	"BEQ",
+	"BMI",
+	"JMP",
+	"JSR",
+	"RTS",
+	"LDA",
+	"LDX",
+	"TAX",
+	"TXA",
+	"STA",
+	"STX",
+	"PHA",
+	"PLA",
+	"PHX",
+	"PLX",
+	"AND",
+	"ORA",
+	"XOR",
+	"ADD",
+	"INX",
+	"SHL",
+	"SHR"
+};
 const std::unordered_map<std::string, uint8_t> Parser::m_OpcodeHashMap{
 		{"BRK", 0x00},
 		{"CMP#", 0x01},
