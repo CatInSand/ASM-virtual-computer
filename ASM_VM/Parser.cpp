@@ -3,6 +3,7 @@
 #include <iostream>
 #include <filesystem>
 #include <vector>
+#include <algorithm>
 
 // text file -> token file -> ROM
 // 
@@ -259,14 +260,14 @@ std::array<uint8_t, Computer::ROM_SIZE> Parser::ParseTokensToROM(const std::stri
 						if (labelName == "+")
 						{
 							std::getline(inputStream, labelName, '.');	//get count
-							//
+							//find correct label
 						}
 					}
 					++currentLine;
 				}
 				else
 				{
-					throw std::exception("Unknown leading token");
+					throw std::exception("Unknown leading token: ");
 				}
 				if (token == "o")
 				{
@@ -332,6 +333,28 @@ bool Parser::GetChar(std::ifstream& inputStream, char& currentChar, bool allowTh
 		{
 			return false;
 		}
+	}
+}
+
+unsigned int Parser::FindUnnamedLabel(bool positive, unsigned int count, unsigned int currentline, std::vector<unsigned int>& unnamedLabels)
+{
+	std::sort(unnamedLabels.begin(), unnamedLabels.end());
+
+	if (positive)
+	{
+		auto iterator = std::find_if(unnamedLabels.begin(), unnamedLabels.end(),
+			[currentline](unsigned int i) {
+				return i > currentline;
+			});
+		return iterator[count - 1];
+	}
+	else
+	{
+		auto iterator = std::find_if(unnamedLabels.begin(), unnamedLabels.end(),
+			[currentline](unsigned int i) {
+				return i <= currentline;
+			});
+		return iterator[-count + 1];
 	}
 }
 

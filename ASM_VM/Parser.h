@@ -30,6 +30,7 @@ private:
 		int line{};
 	};
 	static bool GetChar(std::ifstream& inputStream, char& currentChar, bool allowThrow = true);
+	static unsigned int FindUnnamedLabel(bool positive, unsigned int count, unsigned int currentline, std::vector<unsigned int>& unnamedLabels);
 	static ReadingType DetermineReadingType(const std::string& charStream);
 	static std::string IntToHexString(uint8_t integer);
 	static void ResetRead(std::string& charStream, ReadingType& readingType, std::ifstream& inputStream);
