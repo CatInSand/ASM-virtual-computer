@@ -138,6 +138,8 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="program.s" />
+    <None Include="program2.s" />
+    <None Include="program3.s" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="program.txt" />

@@ -197,7 +197,7 @@ std::array<uint8_t, Computer::ROM_SIZE> Parser::ParseTokensToROM(const std::stri
 				}
 				else if (token == "bop")
 				{
-					++currentLine += 2;
+					currentLine += 2;
 				}
 				else
 				{
@@ -212,6 +212,7 @@ std::array<uint8_t, Computer::ROM_SIZE> Parser::ParseTokensToROM(const std::stri
 			}
 		}
 
+		std::sort(unnamedLabels.begin(), unnamedLabels.end());
 		inputStream.clear();	//reset flags
 		inputStream.seekg(0, std::ios::beg);	//return to start of file
 		reading = true;
@@ -245,7 +246,6 @@ std::array<uint8_t, Computer::ROM_SIZE> Parser::ParseTokensToROM(const std::stri
 					std::getline(inputStream, argument, '.');	//get type
 					if (argument == "val")
 					{
-						std::getline(inputStream, argument, '.');	//skip type (assume hex)
 						std::getline(inputStream, argument, '.');	//get value
 						result[currentLine] = static_cast<uint8_t>(std::stoi(argument, 0, 16));
 					}
@@ -260,7 +260,7 @@ std::array<uint8_t, Computer::ROM_SIZE> Parser::ParseTokensToROM(const std::stri
 						if (labelName == "+")
 						{
 							std::getline(inputStream, labelName, '.');	//get count
-							//find correct label
+							result[currentLine] = static_cast<uint8_t>(FindUnnamedLabel(true, std::stoi(labelName, 0, 16), currentLine, unnamedLabels));
 						}
 					}
 					++currentLine;
@@ -269,36 +269,7 @@ std::array<uint8_t, Computer::ROM_SIZE> Parser::ParseTokensToROM(const std::stri
 				{
 					throw std::exception("Unknown leading token: ");
 				}
-				if (token == "o")
-				{
-					std::getline(inputStream, opcode, '-');
-					result[currentLine] = m_OpcodeHashMap.at(opcode);
-
-					if (!m_UnaryOpcodeHashMap.contains(opcode))
-					{
-						++currentLine;
-
-						std::getline(inputStream, argument, '-');
-						if (argument == "lbl")
-						{
-							std::getline(inputStream, argument, '-');
-							result[currentLine] = labelHashMap.at(argument);
-						}
-						else
-						{
-							result[currentLine] = static_cast<uint8_t>(std::stoi(argument, 0, 16));	//turn hex string into uint8_t
-						}
-
-					}
-
-					++currentLine;
-					inputStream.get();
-				}
-				else
-				{
-					//skip label
-					std::getline(inputStream, opcode);
-				}
+				std::getline(inputStream, labelName);	//skip rest of line
 			}
 			else
 			{
@@ -338,8 +309,6 @@ bool Parser::GetChar(std::ifstream& inputStream, char& currentChar, bool allowTh
 
 unsigned int Parser::FindUnnamedLabel(bool positive, unsigned int count, unsigned int currentline, std::vector<unsigned int>& unnamedLabels)
 {
-	std::sort(unnamedLabels.begin(), unnamedLabels.end());
-
 	if (positive)
 	{
 		auto iterator = std::find_if(unnamedLabels.begin(), unnamedLabels.end(),
@@ -354,13 +323,13 @@ unsigned int Parser::FindUnnamedLabel(bool positive, unsigned int count, unsigne
 			[currentline](unsigned int i) {
 				return i <= currentline;
 			});
-		return iterator[-count + 1];
+		return iterator[-static_cast<int>(count) + 1];
 	}
 }
 
 Parser::ReadingType Parser::DetermineReadingType(const std::string& charStream)
 {
-	
+	return {};
 }
 
 std::string Parser::IntToHexString(uint8_t integer)
